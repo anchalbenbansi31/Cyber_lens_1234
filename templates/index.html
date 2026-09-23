@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CyberLens | Digital Authenticity Verification</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top"><span class="logo">◉</span>CyberLens</a>
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <nav id="navLinks">
+      <a href="#analyzer">Analyzer</a>
+      <a href="#how">How it works</a>
+      <a href="#team">Team</a>
+    </nav>
+    <div class="status"><span id="statusDot"></span><span id="statusText">Checking...</span></div>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="badge">MUSA CodeX 2026 · Cybersecurity</div>
+  <h1>Verify what is <span>real</span>.<br>Expose what is fake.</h1>
+  <p>CyberLens checks images with an AI-assisted deepfake detector and returns a risk score, verdict, confidence and evidence.</p>
+  <div class="hero-actions">
+    <a class="btn primary" href="#analyzer">Analyze a file</a>
+    <a class="btn secondary" href="#how">How it works</a>
+  </div>
+  <div class="stats">
+    <div><strong>1</strong><small>AI image detector</small></div>
+    <div><strong>0–100</strong><small>Risk score</small></div>
+    <div><strong>20 MB</strong><small>Max upload</small></div>
+  </div>
+</section>
+
+<section class="section" id="analyzer">
+  <h2>Verify a file</h2>
+  <p class="sub">Upload an image and get an AI model result and evidence report.</p>
+  <div class="analyzer-grid">
+    <div class="card">
+      <div class="dropzone" id="dropzone">
+        <input id="fileInput" type="file" accept=".jpg,.jpeg,.png,.webp" hidden>
+        <div class="upload-icon">⬆</div>
+        <h3>Drag &amp; drop your file here</h3>
+        <p>or <button class="text-btn" id="browseBtn">browse from your device</button></p>
+        <div class="formats">JPG · JPEG · PNG · WEBP<br>Max 20 MB</div>
+      </div>
+      <div id="selected" class="selected hidden">
+        <div class="thumb-wrap"><img id="thumb" alt="Selected image"></div>
+        <div class="selected-info"><strong id="fileName">-</strong><span id="fileMeta">-</span></div>
+        <button class="remove" id="removeBtn">✕</button>
+      </div>
+      <button class="btn primary analyze-btn" id="analyzeBtn" disabled>Analyze file</button>
+      <p class="note">The model output is shown as returned. No random or filename-based prediction is used.</p>
+    </div>
+
+    <div class="card report-card">
+      <div id="emptyReport" class="empty"><div class="empty-icon">◎</div><p>Your analysis report will appear here.</p></div>
+      <div id="loading" class="empty hidden"><div class="spinner"></div><p>Running AI analysis...</p><small>Please wait.</small></div>
+
+      <div id="report" class="hidden">
+        <div class="report-top">
+          <div class="score"><strong id="risk">0</strong><span>Risk score</span></div>
+          <div>
+            <span id="verdictPill" class="pill">Needs Verification</span>
+            <h3 id="verdict">Needs Verification</h3>
+            <p>Confidence: <b id="confidence">0%</b></p>
+          </div>
+        </div>
+        <div class="meta">
+          <div><small>Verification ID</small><b id="verificationId">-</b></div>
+          <div><small>File</small><b id="resultFile">-</b></div>
+          <div><small>Status</small><b id="resultStatus">-</b></div>
+        </div>
+        <h4>Evidence</h4>
+        <ul id="evidence"></ul>
+        <button class="btn secondary" id="againBtn">New analysis</button>
+      </div>
+
+      <div id="errorBox" class="error hidden"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <h2>How it works</h2>
+  <p class="sub">A simple, transparent verification pipeline.</p>
+  <div class="steps">
+    <article><span>1</span><h3>Upload</h3><p>Select a supported image from your laptop or phone.</p></article>
+    <article><span>2</span><h3>Validate</h3><p>The backend checks the file type and size.</p></article>
+    <article><span>3</span><h3>Analyze</h3><p>The TensorFlow Lite detector evaluates the image.</p></article>
+    <article><span>4</span><h3>Report</h3><p>The actual model output becomes the risk score, verdict and evidence.</p></article>
+  </div>
+</section>
+
+<section class="section" id="how-to-use">
+  <h2>How to Use CyberLens</h2>
+  <p class="sub">Follow these simple steps.</p>
+  <div class="use-grid">
+    <div><b>1</b><p>Open CyberLens on your laptop or phone.</p></div>
+    <div><b>2</b><p>Choose a JPG, PNG, JPEG or WEBP image.</p></div>
+    <div><b>3</b><p>Click Analyze file.</p></div>
+    <div><b>4</b><p>Wait for the AI model to finish.</p></div>
+    <div><b>5</b><p>Read the risk score and verdict.</p></div>
+    <div><b>6</b><p>Review the evidence before making important decisions.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Detection Benchmark</h2>
+  <p class="sub">Record your own test images. Results are not fabricated by the frontend.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>File</th><th>Expected</th><th>Model Result</th><th>Confidence</th><th>Status</th></tr></thead>
+      <tbody><tr><td>Upload a test image</td><td>Real/Fake</td><td>—</td><td>—</td><td>—</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section" id="team">
+  <h2>Team CyberLens</h2>
+  <p class="sub">Built by third-year CS students for MUSA CodeX 2026.</p>
+  <div class="team">
+    <article><div>PC</div><h3>Purva Chaudhari</h3><p>AI / ML Engineer</p></article>
+    <article><div>AB</div><h3>Anchal Benbansi</h3><p>Backend Developer</p></article>
+    <article><div>TC</div><h3>Trunali Chavan</h3><p>Frontend Developer</p></article>
+  </div>
+</section>
+</main>
+<footer>© 2026 CyberLens · MUSA CodeX · Results are AI-assisted and should be verified by humans.</footer>
+<script src="/static/script.js"></script>
+</body>
+</html>
