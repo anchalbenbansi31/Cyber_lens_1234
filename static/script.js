@@ -1,5 +1,5 @@
 const BACKEND_URL =
-    "https://nicole-prostores-chemicals-chambers.trycloudflare.com";
+    "https://tension-films-affiliates-cope.trycloudflare.com";
 
 let selectedFile = null;
 
