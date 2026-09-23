@@ -1,123 +1,423 @@
-const fileInput=document.getElementById("fileInput");
-const browseBtn=document.getElementById("browseBtn");
-const dropzone=document.getElementById("dropzone");
-const selected=document.getElementById("selected");
-const thumb=document.getElementById("thumb");
-const fileName=document.getElementById("fileName");
-const fileMeta=document.getElementById("fileMeta");
-const removeBtn=document.getElementById("removeBtn");
-const analyzeBtn=document.getElementById("analyzeBtn");
-const emptyReport=document.getElementById("emptyReport");
-const loading=document.getElementById("loading");
-const report=document.getElementById("report");
-const errorBox=document.getElementById("errorBox");
-const againBtn=document.getElementById("againBtn");
-const menuBtn=document.getElementById("menuBtn");
-const navLinks=document.getElementById("navLinks");
-let currentFile=null;
+const BACKEND_URL =
+    "https://thinkpad-basically-ebooks-shareholders.trycloudflare.com";
 
-menuBtn.addEventListener("click",()=>navLinks.classList.toggle("open"));
-navLinks.querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>navLinks.classList.remove("open")));
-browseBtn.addEventListener("click",()=>fileInput.click());
-fileInput.addEventListener("change",()=>{if(fileInput.files[0])selectFile(fileInput.files[0]);});
+let selectedFile = null;
 
-["dragenter","dragover"].forEach(t=>dropzone.addEventListener(t,e=>{e.preventDefault();dropzone.style.borderColor="#079ba3";}));
-["dragleave","drop"].forEach(t=>dropzone.addEventListener(t,e=>{e.preventDefault();dropzone.style.borderColor="#9fc7a2";}));
-dropzone.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)selectFile(f);});
+// --------------------------------------------------
+// ELEMENTS
+// --------------------------------------------------
 
-function selectFile(file){
-  const allowed=["image/jpeg","image/png","image/webp"];
-  if(!allowed.includes(file.type)){showError("Please select a JPG, JPEG, PNG or WEBP image.");return;}
-  if(file.size>20*1024*1024){showError("Maximum image size is 20 MB.");return;}
-  currentFile=file;
-  const reader=new FileReader();
-  reader.onload=e=>thumb.src=e.target.result;
-  reader.readAsDataURL(file);
-  fileName.textContent=file.name;
-  fileMeta.textContent=`${file.type||"image"} · ${(file.size/1024).toFixed(1)} KB`;
-  selected.classList.remove("hidden");
-  analyzeBtn.disabled=false;
-  clearError();
-  showEmpty();
+const fileInput = document.querySelector('input[type="file"]');
+
+const analyzeButton = Array.from(document.querySelectorAll("button"))
+    .find(button =>
+        button.innerText.toLowerCase().includes("analyze")
+    );
+
+const statusElements = Array.from(document.querySelectorAll("*"))
+    .filter(element =>
+        element.children.length === 0 &&
+        element.innerText &&
+        (
+            element.innerText.includes("Backend offline") ||
+            element.innerText.includes("Backend online")
+        )
+    );
+
+// --------------------------------------------------
+// BACKEND HEALTH CHECK
+// --------------------------------------------------
+
+async function checkBackend() {
+
+    try {
+
+        const response = await fetch(
+            `${BACKEND_URL}/api/health`,
+            {
+                method: "GET",
+                cache: "no-store"
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log("Backend:", data);
+
+        setBackendStatus(true);
+
+    } catch (error) {
+
+        console.error("Backend connection failed:", error);
+
+        setBackendStatus(false);
+    }
 }
 
-removeBtn.addEventListener("click",clearFile);
-againBtn.addEventListener("click",clearFile);
+// --------------------------------------------------
+// BACKEND STATUS
+// --------------------------------------------------
 
-function clearFile(){
-  currentFile=null;
-  fileInput.value="";
-  selected.classList.add("hidden");
-  analyzeBtn.disabled=true;
-  showEmpty();
-  clearError();
+function setBackendStatus(online) {
+
+    statusElements.forEach(element => {
+
+        if (online) {
+
+            element.innerHTML = "🟢 Backend online";
+            element.style.color = "#087f5b";
+
+        } else {
+
+            element.innerHTML = "🔴 Backend offline";
+            element.style.color = "#d63031";
+        }
+
+    });
 }
 
-analyzeBtn.addEventListener("click",async()=>{
-  if(!currentFile)return;
-  clearError();
-  emptyReport.classList.add("hidden");
-  report.classList.add("hidden");
-  loading.classList.remove("hidden");
-  analyzeBtn.disabled=true;
+// --------------------------------------------------
+// FILE SELECTION
+// --------------------------------------------------
 
-  try{
-    const form=new FormData();
-    form.append("file",currentFile);
+if (fileInput) {
 
-    const response=await fetch("/api/analyze",{method:"POST",body:form});
-    let payload;
-    try{payload=await response.json();}catch{throw new Error(`Backend returned HTTP ${response.status}.`);}
-    if(!response.ok||!payload.success)throw new Error(payload.error||"Analysis failed.");
-    renderResult(payload);
-  }catch(err){
-    loading.classList.add("hidden");
-    showError(err.message);
-  }finally{
-    analyzeBtn.disabled=false;
-  }
-});
+    fileInput.addEventListener("change", function () {
 
-function renderResult(payload){
-  loading.classList.add("hidden");
-  report.classList.remove("hidden");
-  const a=payload.analysis;
-  document.getElementById("risk").textContent=a.risk_score;
-  document.getElementById("verdict").textContent=a.verdict;
-  document.getElementById("confidence").textContent=`${a.confidence}%`;
-  document.getElementById("verificationId").textContent=payload.verification_id;
-  document.getElementById("resultFile").textContent=payload.file.name;
-  document.getElementById("resultStatus").textContent=payload.status;
+        if (this.files && this.files.length > 0) {
 
-  const pill=document.getElementById("verdictPill");
-  pill.textContent=a.verdict;
-  if(a.verdict==="Likely Fake"){pill.style.background="#ffe1e1";pill.style.color="#a51f1f";}
-  else if(a.verdict==="Likely Authentic"){pill.style.background="#e1f2e9";pill.style.color="#075c5f";}
-  else{pill.style.background="#fff0d5";pill.style.color="#8a5a00";}
+            selectedFile = this.files[0];
 
-  const list=document.getElementById("evidence");
-  list.innerHTML="";
-  (a.evidence||[]).forEach(item=>{const li=document.createElement("li");li.textContent=item;list.appendChild(li);});
+            console.log(
+                "Selected file:",
+                selectedFile.name
+            );
+
+        }
+
+    });
 }
 
-function showEmpty(){emptyReport.classList.remove("hidden");loading.classList.add("hidden");report.classList.add("hidden");}
-function showError(message){errorBox.textContent=message;errorBox.classList.remove("hidden");}
-function clearError(){errorBox.classList.add("hidden");errorBox.textContent="";}
+// --------------------------------------------------
+// ANALYZE BUTTON
+// --------------------------------------------------
 
-async function checkHealth(){
-  const dot=document.getElementById("statusDot");
-  const text=document.getElementById("statusText");
-  try{
-    const response=await fetch("/api/health",{cache:"no-store"});
-    if(!response.ok)throw new Error();
-    const data=await response.json();
-    if(data.status!=="healthy")throw new Error();
-    dot.style.background="#079ba3";
-    text.textContent="Backend online";
-  }catch{
-    dot.style.background="#e33b3b";
-    text.textContent="Backend offline";
-  }
+if (analyzeButton) {
+
+    analyzeButton.addEventListener("click", async function () {
+
+        // Get file directly from input
+        if (!selectedFile && fileInput && fileInput.files.length > 0) {
+            selectedFile = fileInput.files[0];
+        }
+
+        if (!selectedFile) {
+
+            showResult(
+                "Please select an image first."
+            );
+
+            return;
+        }
+
+        // Check file type
+        const allowedTypes = [
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/webp"
+        ];
+
+        if (!allowedTypes.includes(selectedFile.type)) {
+
+            showResult(
+                "Please upload JPG, JPEG, PNG or WEBP."
+            );
+
+            return;
+        }
+
+        // Check file size
+        if (selectedFile.size > 20 * 1024 * 1024) {
+
+            showResult(
+                "File size must be less than 20 MB."
+            );
+
+            return;
+        }
+
+        // Disable button
+        analyzeButton.disabled = true;
+        analyzeButton.innerText = "Analyzing...";
+
+        showResult("Uploading image and running AI analysis...");
+
+        try {
+
+            const form = new FormData();
+
+            form.append("file", selectedFile);
+
+            console.log(
+                "Sending request to:",
+                `${BACKEND_URL}/api/analyze`
+            );
+
+            const response = await fetch(
+                `${BACKEND_URL}/api/analyze`,
+                {
+                    method: "POST",
+                    body: form
+                }
+            );
+
+            console.log(
+                "HTTP status:",
+                response.status
+            );
+
+            const data = await response.json();
+
+            console.log(
+                "Backend response:",
+                data
+            );
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    `Backend returned HTTP ${response.status}`
+                );
+            }
+
+            if (!data.success) {
+
+                throw new Error(
+                    data.error ||
+                    "AI analysis failed."
+                );
+            }
+
+            displayAnalysis(data);
+
+        } catch (error) {
+
+            console.error(
+                "Analysis error:",
+                error
+            );
+
+            showResult(
+                `❌ ${error.message}`
+            );
+
+        } finally {
+
+            analyzeButton.disabled = false;
+            analyzeButton.innerText = "Analyze file";
+        }
+
+    });
 }
-checkHealth();
-setInterval(checkHealth,15000);
+
+// --------------------------------------------------
+// DISPLAY RESULT
+// --------------------------------------------------
+
+function displayAnalysis(data) {
+
+    const analysis = data.analysis || {};
+
+    const verdict =
+        analysis.verdict || "Needs Verification";
+
+    const confidence =
+        analysis.confidence ?? 0;
+
+    const fakeProbability =
+        analysis.fake_probability !== undefined
+            ? Number(analysis.fake_probability) * 100
+            : 0;
+
+    const realProbability =
+        analysis.real_probability !== undefined
+            ? Number(analysis.real_probability) * 100
+            : 0;
+
+    const riskScore =
+        analysis.risk_score ?? fakeProbability;
+
+    const evidence =
+        Array.isArray(analysis.evidence)
+            ? analysis.evidence
+            : [];
+
+    let evidenceHTML = "";
+
+    evidence.forEach(item => {
+
+        evidenceHTML += `
+            <li>${escapeHTML(String(item))}</li>
+        `;
+
+    });
+
+    const resultHTML = `
+
+        <div style="
+            padding:24px;
+            border-radius:16px;
+            background:#f7fff8;
+            border:1px solid #b9ddc0;
+            margin-top:15px;
+        ">
+
+            <h2 style="margin-top:0;">
+                AI Analysis Result
+            </h2>
+
+            <h3>
+                Verdict:
+                ${escapeHTML(verdict)}
+            </h3>
+
+            <p>
+                <strong>Confidence:</strong>
+                ${Number(confidence).toFixed(2)}%
+            </p>
+
+            <p>
+                <strong>Fake Probability:</strong>
+                ${fakeProbability.toFixed(2)}%
+            </p>
+
+            <p>
+                <strong>Real Probability:</strong>
+                ${realProbability.toFixed(2)}%
+            </p>
+
+            <p>
+                <strong>Risk Score:</strong>
+                ${Number(riskScore).toFixed(2)}
+            </p>
+
+            ${
+                evidenceHTML
+                    ? `
+                        <h4>Evidence</h4>
+                        <ul>
+                            ${evidenceHTML}
+                        </ul>
+                    `
+                    : ""
+            }
+
+            <p style="
+                font-size:13px;
+                color:#666;
+                margin-bottom:0;
+            ">
+                Verification ID:
+                ${escapeHTML(data.verification_id || "N/A")}
+            </p>
+
+        </div>
+    `;
+
+    showResultHTML(resultHTML);
+}
+
+// --------------------------------------------------
+// RESULT MESSAGE
+// --------------------------------------------------
+
+function showResult(message) {
+
+    showResultHTML(`
+        <div style="
+            padding:20px;
+            border-radius:14px;
+            background:#fff5f5;
+            border:1px solid #ffb5b5;
+            color:#a61e1e;
+        ">
+            ${escapeHTML(message)}
+        </div>
+    `);
+
+}
+
+// --------------------------------------------------
+// FIND RESULT AREA
+// --------------------------------------------------
+
+function showResultHTML(html) {
+
+    let resultBox =
+        document.getElementById("cyberlens-result");
+
+    if (!resultBox) {
+
+        resultBox = document.createElement("div");
+
+        resultBox.id = "cyberlens-result";
+
+        resultBox.style.marginTop = "20px";
+
+        // Try to put result near analyzer
+        const analyzer =
+            document.querySelector(
+                "#analyzer"
+            );
+
+        if (analyzer) {
+
+            analyzer.appendChild(resultBox);
+
+        } else if (analyzeButton) {
+
+            analyzeButton.parentElement.appendChild(
+                resultBox
+            );
+
+        } else {
+
+            document.body.appendChild(
+                resultBox
+            );
+        }
+    }
+
+    resultBox.innerHTML = html;
+}
+
+// --------------------------------------------------
+// HTML ESCAPE
+// --------------------------------------------------
+
+function escapeHTML(value) {
+
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+// --------------------------------------------------
+// START BACKEND CHECK
+// --------------------------------------------------
+
+checkBackend();
+
+setInterval(
+    checkBackend,
+    15000
+);
