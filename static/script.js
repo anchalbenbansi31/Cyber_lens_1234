@@ -1,24 +1,11 @@
 const BACKEND_URL =
     "https://tension-films-affiliates-cope.trycloudflare.com";
 
-const statusElements = Array.from(document.querySelectorAll("*"))
-    .filter(element =>
-        element.children.length === 0 &&
-        element.innerText &&
-        (
-            element.innerText.includes("Checking...") ||
-            element.innerText.includes("Backend offline") ||
-            element.innerText.includes("Backend online")
-        )
-    );
-
 let selectedFile = null;
 
-let selectedFile = null;
-
-// --------------------------------------------------
-// ELEMENTS
-// --------------------------------------------------
+/* --------------------------------------------------
+   FIND PAGE ELEMENTS
+-------------------------------------------------- */
 
 const fileInput = document.querySelector('input[type="file"]');
 
@@ -27,41 +14,38 @@ const analyzeButton = Array.from(document.querySelectorAll("button"))
         button.innerText.toLowerCase().includes("analyze")
     );
 
-function setBackendStatus(online) {
+/* --------------------------------------------------
+   BACKEND STATUS
+-------------------------------------------------- */
 
+function setBackendStatus(online) {
     const elements = document.querySelectorAll("body *");
 
     elements.forEach(element => {
+        if (element.children.length > 0) return;
 
         const text = element.textContent.trim();
 
         if (
             text === "Checking..." ||
             text === "Backend offline" ||
-            text === "Backend online"
+            text === "Backend online" ||
+            text === "🔴 Backend offline" ||
+            text === "🟢 Backend online"
         ) {
+            element.textContent = online
+                ? "🟢 Backend online"
+                : "🔴 Backend offline";
 
-            if (online) {
-                element.textContent = "🟢 Backend online";
-                element.style.color = "#087f5b";
-            } else {
-                element.textContent = "🔴 Backend offline";
-                element.style.color = "#d63031";
-            }
-
+            element.style.color = online
+                ? "#087f5b"
+                : "#d63031";
         }
-
     });
 }
 
-// --------------------------------------------------
-// BACKEND HEALTH CHECK
-// --------------------------------------------------
-
 async function checkBackend() {
-
     try {
-
         const response = await fetch(
             `${BACKEND_URL}/api/health`,
             {
@@ -82,359 +66,664 @@ async function checkBackend() {
 
     } catch (error) {
 
-        console.error("Backend connection failed:", error);
+        console.error(
+            "Backend connection failed:",
+            error
+        );
 
         setBackendStatus(false);
     }
 }
 
-// --------------------------------------------------
-// BACKEND STATUS
-// --------------------------------------------------
+/* --------------------------------------------------
+   FILE SELECTION
+-------------------------------------------------- */
 
-function setBackendStatus(online) {
+function handleFile(file) {
 
-    statusElements.forEach(element => {
+    if (!file) {
+        return;
+    }
 
-        if (online) {
+    const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp"
+    ];
 
-            element.innerHTML = "🟢 Backend online";
-            element.style.color = "#087f5b";
+    const allowedExtensions = [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp"
+    ];
 
-        } else {
+    const fileName = file.name.toLowerCase();
 
-            element.innerHTML = "🔴 Backend offline";
-            element.style.color = "#d63031";
-
-        }
-
-    });
-}
-
-// --------------------------------------------------
-// FILE SELECTION
-// --------------------------------------------------
-
-if (fileInput) {
-
-    fileInput.addEventListener("change", function () {
-
-        if (this.files && this.files.length > 0) {
-
-            selectedFile = this.files[0];
-
-            console.log(
-                "Selected file:",
-                selectedFile.name
-            );
-        }
-
-    });
-}
-
-// --------------------------------------------------
-// ANALYZE BUTTON
-// --------------------------------------------------
-
-if (analyzeButton) {
-
-    analyzeButton.addEventListener("click", async function () {
-
-        if (!selectedFile && fileInput && fileInput.files.length > 0) {
-            selectedFile = fileInput.files[0];
-        }
-
-        if (!selectedFile) {
-
-            showResult("Please select an image first.");
-
-            return;
-        }
-
-        const allowedTypes = [
-            "image/jpeg",
-            "image/jpg",
-            "image/png",
-            "image/webp"
-        ];
-
-        if (!allowedTypes.includes(selectedFile.type)) {
-
-            showResult(
-                "Please upload JPG, JPEG, PNG or WEBP."
-            );
-
-            return;
-        }
-
-        if (selectedFile.size > 20 * 1024 * 1024) {
-
-            showResult(
-                "File size must be less than 20 MB."
-            );
-
-            return;
-        }
-
-        analyzeButton.disabled = true;
-        analyzeButton.innerText = "Analyzing...";
-
-        showResult(
-            "Uploading image and running AI analysis..."
+    const validType =
+        allowedTypes.includes(file.type) ||
+        allowedExtensions.some(ext =>
+            fileName.endsWith(ext)
         );
 
-        try {
+    if (!validType) {
 
-            const form = new FormData();
+        alert(
+            "Please upload JPG, JPEG, PNG or WEBP image."
+        );
 
-            form.append("file", selectedFile);
+        return;
+    }
 
-            console.log(
-                "Sending request to:",
-                `${BACKEND_URL}/api/analyze`
-            );
+    const maxSize =
+        20 * 1024 * 1024;
 
-            const response = await fetch(
-                `${BACKEND_URL}/api/analyze`,
-                {
-                    method: "POST",
-                    body: form
-                }
-            );
+    if (file.size > maxSize) {
 
-            console.log(
-                "HTTP status:",
-                response.status
-            );
+        alert(
+            "File size must be less than 20 MB."
+        );
 
-            const data = await response.json();
+        return;
+    }
 
-            console.log(
-                "Backend response:",
-                data
-            );
+    selectedFile = file;
 
-            if (!response.ok) {
+    console.log(
+        "Selected file:",
+        selectedFile.name
+    );
 
-                throw new Error(
-                    data.error ||
-                    `Backend returned HTTP ${response.status}`
-                );
-            }
+    updateSelectedFileDisplay();
+}
 
-            if (!data.success) {
+/* --------------------------------------------------
+   SHOW SELECTED FILE
+-------------------------------------------------- */
 
-                throw new Error(
-                    data.error ||
-                    "AI analysis failed."
-                );
-            }
+function updateSelectedFileDisplay() {
 
-            displayAnalysis(data);
+    if (!selectedFile) {
+        return;
+    }
 
-        } catch (error) {
+    const elements =
+        document.querySelectorAll("body *");
 
-            console.error(
-                "Analysis error:",
-                error
-            );
+    elements.forEach(element => {
 
-            showResult(
-                `❌ ${error.message}`
-            );
-
-        } finally {
-
-            analyzeButton.disabled = false;
-            analyzeButton.innerText = "Analyze file";
+        if (element.children.length > 0) {
+            return;
         }
 
+        const text =
+            element.textContent.trim();
+
+        if (
+            text ===
+            "Drag & drop your file here"
+        ) {
+
+            element.textContent =
+                selectedFile.name;
+        }
     });
 }
 
-// --------------------------------------------------
-// DISPLAY ANALYSIS
-// --------------------------------------------------
+/* --------------------------------------------------
+   ANALYZE IMAGE
+-------------------------------------------------- */
+
+async function analyzeFile() {
+
+    if (!selectedFile) {
+
+        alert(
+            "Please select an image first."
+        );
+
+        return;
+    }
+
+    if (analyzeButton) {
+
+        analyzeButton.disabled = true;
+        analyzeButton.textContent =
+            "Analyzing...";
+    }
+
+    showLoading();
+
+    try {
+
+        const formData =
+            new FormData();
+
+        formData.append(
+            "file",
+            selectedFile
+        );
+
+        console.log(
+            "Sending image to:",
+            `${BACKEND_URL}/api/analyze`
+        );
+
+        const response = await fetch(
+            `${BACKEND_URL}/api/analyze`,
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+        if (!response.ok) {
+
+            let errorMessage =
+                `HTTP ${response.status}`;
+
+            try {
+
+                const errorData =
+                    await response.json();
+
+                if (errorData.error) {
+                    errorMessage =
+                        errorData.error;
+                }
+
+            } catch (_) {}
+
+            throw new Error(errorMessage);
+        }
+
+        const data =
+            await response.json();
+
+        console.log(
+            "Analysis result:",
+            data
+        );
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error ||
+                "Analysis failed."
+            );
+        }
+
+        displayAnalysis(data);
+
+    } catch (error) {
+
+        console.error(
+            "Analysis failed:",
+            error
+        );
+
+        showError(
+            error.message ||
+            "Unable to analyze the image."
+        );
+
+    } finally {
+
+        if (analyzeButton) {
+
+            analyzeButton.disabled = false;
+            analyzeButton.textContent =
+                "Analyze file";
+        }
+    }
+}
+
+/* --------------------------------------------------
+   LOADING DISPLAY
+-------------------------------------------------- */
+
+function showLoading() {
+
+    const result =
+        findResultContainer();
+
+    if (!result) {
+        return;
+    }
+
+    result.innerHTML = `
+        <div style="
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            min-height:300px;
+            text-align:center;
+        ">
+            <div style="
+                width:48px;
+                height:48px;
+                border:5px solid #cceeee;
+                border-top-color:#0b9fac;
+                border-radius:50%;
+                animation: cyberLensSpin 1s linear infinite;
+                margin-bottom:20px;
+            "></div>
+
+            <h3 style="margin:0 0 8px;">
+                Analyzing image...
+            </h3>
+
+            <p style="margin:0;color:#526777;">
+                CyberLens AI is checking the uploaded image.
+            </p>
+        </div>
+
+        <style>
+            @keyframes cyberLensSpin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    `;
+}
+
+/* --------------------------------------------------
+   FIND RESULT PANEL
+-------------------------------------------------- */
+
+function findResultContainer() {
+
+    const possible =
+        Array.from(
+            document.querySelectorAll(
+                "main section, main div, section, article"
+            )
+        );
+
+    for (const element of possible) {
+
+        const text =
+            element.textContent || "";
+
+        if (
+            text.includes(
+                "Your analysis report will appear here."
+            )
+        ) {
+
+            return element;
+        }
+    }
+
+    const fallback =
+        document.querySelector(
+            '[id*="result"], [class*="result"]'
+        );
+
+    return fallback || null;
+}
+
+/* --------------------------------------------------
+   DISPLAY ANALYSIS
+-------------------------------------------------- */
 
 function displayAnalysis(data) {
 
-    const analysis = data.analysis || {};
+    const analysis =
+        data.analysis || data;
 
     const verdict =
-        analysis.verdict || "Needs Verification";
+        analysis.verdict ||
+        "Unknown";
 
     const confidence =
-        analysis.confidence ?? 0;
-
-    const fakeProbability =
-        analysis.fake_probability !== undefined
-            ? Number(analysis.fake_probability) * 100
-            : 0;
-
-    const realProbability =
-        analysis.real_probability !== undefined
-            ? Number(analysis.real_probability) * 100
-            : 0;
+        Number(
+            analysis.confidence || 0
+        );
 
     const riskScore =
-        analysis.risk_score ?? fakeProbability;
+        Number(
+            analysis.risk_score || 0
+        );
+
+    const fakeProbability =
+        Number(
+            analysis.fake_probability || 0
+        ) * 100;
+
+    const realProbability =
+        Number(
+            analysis.real_probability || 0
+        ) * 100;
 
     const evidence =
         Array.isArray(analysis.evidence)
             ? analysis.evidence
             : [];
 
-    let evidenceHTML = "";
+    const result =
+        findResultContainer();
 
-    evidence.forEach(item => {
+    if (!result) {
 
-        evidenceHTML += `
-            <li>${escapeHTML(String(item))}</li>
-        `;
+        console.log(
+            "Analysis completed:",
+            analysis
+        );
 
-    });
+        return;
+    }
 
-    const resultHTML = `
+    const verdictLower =
+        verdict.toLowerCase();
+
+    let verdictIcon = "🔎";
+
+    if (
+        verdictLower.includes("fake")
+    ) {
+        verdictIcon = "⚠️";
+    }
+
+    if (
+        verdictLower.includes("authentic") ||
+        verdictLower.includes("real")
+    ) {
+        verdictIcon = "✅";
+    }
+
+    result.innerHTML = `
         <div style="
-            padding:24px;
-            border-radius:16px;
-            background:#f7fff8;
-            border:1px solid #b9ddc0;
-            margin-top:15px;
+            padding:28px;
+            font-family:inherit;
         ">
 
-            <h2 style="margin-top:0;">
-                AI Analysis Result
-            </h2>
+            <div style="
+                text-align:center;
+                margin-bottom:25px;
+            ">
 
-            <h3>
-                Verdict:
-                ${escapeHTML(verdict)}
-            </h3>
+                <div style="
+                    font-size:48px;
+                    margin-bottom:10px;
+                ">
+                    ${verdictIcon}
+                </div>
 
-            <p>
-                <strong>Confidence:</strong>
-                ${Number(confidence).toFixed(2)}%
-            </p>
+                <h2 style="
+                    margin:0 0 8px;
+                    color:#123447;
+                ">
+                    ${escapeHTML(verdict)}
+                </h2>
 
-            <p>
-                <strong>Fake Probability:</strong>
-                ${fakeProbability.toFixed(2)}%
-            </p>
+                <p style="
+                    margin:0;
+                    color:#526777;
+                ">
+                    AI confidence:
+                    <strong>
+                        ${confidence.toFixed(2)}%
+                    </strong>
+                </p>
 
-            <p>
-                <strong>Real Probability:</strong>
-                ${realProbability.toFixed(2)}%
-            </p>
+            </div>
 
-            <p>
-                <strong>Risk Score:</strong>
-                ${Number(riskScore).toFixed(2)}
-            </p>
+            <div style="
+                display:grid;
+                grid-template-columns:
+                    repeat(auto-fit,minmax(140px,1fr));
+                gap:12px;
+                margin-bottom:22px;
+            ">
 
-            ${
-                evidenceHTML
+                ${makeStat(
+                    "Fake Probability",
+                    `${fakeProbability.toFixed(2)}%`
+                )}
+
+                ${makeStat(
+                    "Real Probability",
+                    `${realProbability.toFixed(2)}%`
+                )}
+
+                ${makeStat(
+                    "Risk Score",
+                    `${riskScore.toFixed(2)}`
+                )}
+
+            </div>
+
+            <div style="
+                border-top:1px solid #d5e5e0;
+                padding-top:20px;
+            ">
+
+                <h3 style="
+                    margin:0 0 12px;
+                    color:#123447;
+                ">
+                    Evidence
+                </h3>
+
+                ${
+                    evidence.length
                     ? `
-                        <h4>Evidence</h4>
-                        <ul>
-                            ${evidenceHTML}
+                        <ul style="
+                            margin:0;
+                            padding-left:20px;
+                            line-height:1.7;
+                            color:#526777;
+                        ">
+                            ${evidence
+                                .map(item =>
+                                    `<li>${escapeHTML(item)}</li>`
+                                )
+                                .join("")
+                            }
                         </ul>
                     `
-                    : ""
+                    : `
+                        <p style="color:#526777;">
+                            No additional evidence was returned.
+                        </p>
+                    `
+                }
+
+            </div>
+
+            ${
+                data.verification_id
+                ? `
+                    <p style="
+                        margin-top:22px;
+                        font-size:13px;
+                        color:#71818b;
+                    ">
+                        Verification ID:
+                        <strong>
+                            ${escapeHTML(
+                                data.verification_id
+                            )}
+                        </strong>
+                    </p>
+                `
+                : ""
             }
 
-            <p style="
+        </div>
+    `;
+}
+
+/* --------------------------------------------------
+   STAT CARD
+-------------------------------------------------- */
+
+function makeStat(label, value) {
+
+    return `
+        <div style="
+            background:#f4faf7;
+            border:1px solid #d7e8df;
+            border-radius:12px;
+            padding:16px;
+            text-align:center;
+        ">
+
+            <div style="
                 font-size:13px;
-                color:#666;
-                margin-bottom:0;
+                color:#60747e;
+                margin-bottom:6px;
             ">
-                Verification ID:
-                ${escapeHTML(
-                    data.verification_id || "N/A"
-                )}
+                ${escapeHTML(label)}
+            </div>
+
+            <strong style="
+                font-size:20px;
+                color:#087f8c;
+            ">
+                ${escapeHTML(value)}
+            </strong>
+
+        </div>
+    `;
+}
+
+/* --------------------------------------------------
+   ERROR DISPLAY
+-------------------------------------------------- */
+
+function showError(message) {
+
+    const result =
+        findResultContainer();
+
+    if (!result) {
+
+        alert(message);
+        return;
+    }
+
+    result.innerHTML = `
+        <div style="
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            min-height:300px;
+            text-align:center;
+            padding:25px;
+        ">
+
+            <div style="
+                font-size:45px;
+                margin-bottom:15px;
+            ">
+                ⚠️
+            </div>
+
+            <h3 style="
+                margin:0 0 10px;
+                color:#b42318;
+            ">
+                Analysis failed
+            </h3>
+
+            <p style="
+                margin:0;
+                color:#526777;
+                max-width:500px;
+            ">
+                ${escapeHTML(message)}
             </p>
 
         </div>
     `;
-
-    showResultHTML(resultHTML);
 }
 
-// --------------------------------------------------
-// RESULT MESSAGE
-// --------------------------------------------------
-
-function showResult(message) {
-
-    showResultHTML(`
-        <div style="
-            padding:20px;
-            border-radius:14px;
-            background:#fff5f5;
-            border:1px solid #ffb5b5;
-            color:#a61e1e;
-        ">
-            ${escapeHTML(message)}
-        </div>
-    `);
-}
-
-// --------------------------------------------------
-// RESULT AREA
-// --------------------------------------------------
-
-function showResultHTML(html) {
-
-    let resultBox =
-        document.getElementById("cyberlens-result");
-
-    if (!resultBox) {
-
-        resultBox = document.createElement("div");
-
-        resultBox.id = "cyberlens-result";
-
-        resultBox.style.marginTop = "20px";
-
-        const analyzer =
-            document.querySelector("#analyzer");
-
-        if (analyzer) {
-
-            analyzer.appendChild(resultBox);
-
-        } else if (analyzeButton) {
-
-            analyzeButton.parentElement.appendChild(
-                resultBox
-            );
-
-        } else {
-
-            document.body.appendChild(resultBox);
-        }
-    }
-
-    resultBox.innerHTML = html;
-}
-
-// --------------------------------------------------
-// HTML ESCAPE
-// --------------------------------------------------
+/* --------------------------------------------------
+   ESCAPE HTML
+-------------------------------------------------- */
 
 function escapeHTML(value) {
 
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        String(value ?? "");
+
+    return div.innerHTML;
 }
 
-// --------------------------------------------------
-// START
-// --------------------------------------------------
+/* --------------------------------------------------
+   FILE INPUT
+-------------------------------------------------- */
+
+if (fileInput) {
+
+    fileInput.addEventListener(
+        "change",
+        event => {
+
+            const file =
+                event.target.files[0];
+
+            handleFile(file);
+        }
+    );
+}
+
+/* --------------------------------------------------
+   ANALYZE BUTTON
+-------------------------------------------------- */
+
+if (analyzeButton) {
+
+    analyzeButton.addEventListener(
+        "click",
+        analyzeFile
+    );
+}
+
+/* --------------------------------------------------
+   DRAG & DROP
+-------------------------------------------------- */
+
+const dropZone =
+    document.querySelector(
+        'input[type="file"]'
+    )?.closest("div");
+
+if (dropZone) {
+
+    dropZone.addEventListener(
+        "dragover",
+        event => {
+            event.preventDefault();
+        }
+    );
+
+    dropZone.addEventListener(
+        "drop",
+        event => {
+
+            event.preventDefault();
+
+            const file =
+                event.dataTransfer.files[0];
+
+            handleFile(file);
+        }
+    );
+}
+
+/* --------------------------------------------------
+   START BACKEND CHECK
+-------------------------------------------------- */
 
 checkBackend();
 
