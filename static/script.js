@@ -1,5 +1,5 @@
 const BACKEND_URL =
-    "https://thinkpad-basically-ebooks-shareholders.trycloudflare.com";
+    "https://footwear-dna-columnists-temporarily.trycloudflare.com";
 
 let selectedFile = null;
 
