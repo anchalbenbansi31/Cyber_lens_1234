@@ -14,16 +14,32 @@ const analyzeButton = Array.from(document.querySelectorAll("button"))
         button.innerText.toLowerCase().includes("analyze")
     );
 
-const statusElements = Array.from(document.querySelectorAll("*"))
-    .filter(element =>
-        element.children.length === 0 &&
-        element.innerText &&
-        (
-            element.innerText.includes("Backend offline") ||
-            element.innerText.includes("Backend online") ||
-            element.innerText.includes("Checking...")
-        )
-    );
+function setBackendStatus(online) {
+
+    const elements = document.querySelectorAll("body *");
+
+    elements.forEach(element => {
+
+        const text = element.textContent.trim();
+
+        if (
+            text === "Checking..." ||
+            text === "Backend offline" ||
+            text === "Backend online"
+        ) {
+
+            if (online) {
+                element.textContent = "🟢 Backend online";
+                element.style.color = "#087f5b";
+            } else {
+                element.textContent = "🔴 Backend offline";
+                element.style.color = "#d63031";
+            }
+
+        }
+
+    });
+}
 
 // --------------------------------------------------
 // BACKEND HEALTH CHECK
