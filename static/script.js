@@ -1,5 +1,5 @@
 const BACKEND_URL =
-    "https://footwear-dna-columnists-temporarily.trycloudflare.com";
+    "https://nicole-prostores-chemicals-chambers.trycloudflare.com";
 
 let selectedFile = null;
 
@@ -20,7 +20,8 @@ const statusElements = Array.from(document.querySelectorAll("*"))
         element.innerText &&
         (
             element.innerText.includes("Backend offline") ||
-            element.innerText.includes("Backend online")
+            element.innerText.includes("Backend online") ||
+            element.innerText.includes("Checking...")
         )
     );
 
@@ -46,7 +47,7 @@ async function checkBackend() {
 
         const data = await response.json();
 
-        console.log("Backend:", data);
+        console.log("Backend connected:", data);
 
         setBackendStatus(true);
 
@@ -75,6 +76,7 @@ function setBackendStatus(online) {
 
             element.innerHTML = "🔴 Backend offline";
             element.style.color = "#d63031";
+
         }
 
     });
@@ -96,7 +98,6 @@ if (fileInput) {
                 "Selected file:",
                 selectedFile.name
             );
-
         }
 
     });
@@ -110,21 +111,17 @@ if (analyzeButton) {
 
     analyzeButton.addEventListener("click", async function () {
 
-        // Get file directly from input
         if (!selectedFile && fileInput && fileInput.files.length > 0) {
             selectedFile = fileInput.files[0];
         }
 
         if (!selectedFile) {
 
-            showResult(
-                "Please select an image first."
-            );
+            showResult("Please select an image first.");
 
             return;
         }
 
-        // Check file type
         const allowedTypes = [
             "image/jpeg",
             "image/jpg",
@@ -141,7 +138,6 @@ if (analyzeButton) {
             return;
         }
 
-        // Check file size
         if (selectedFile.size > 20 * 1024 * 1024) {
 
             showResult(
@@ -151,11 +147,12 @@ if (analyzeButton) {
             return;
         }
 
-        // Disable button
         analyzeButton.disabled = true;
         analyzeButton.innerText = "Analyzing...";
 
-        showResult("Uploading image and running AI analysis...");
+        showResult(
+            "Uploading image and running AI analysis..."
+        );
 
         try {
 
@@ -227,7 +224,7 @@ if (analyzeButton) {
 }
 
 // --------------------------------------------------
-// DISPLAY RESULT
+// DISPLAY ANALYSIS
 // --------------------------------------------------
 
 function displayAnalysis(data) {
@@ -269,7 +266,6 @@ function displayAnalysis(data) {
     });
 
     const resultHTML = `
-
         <div style="
             padding:24px;
             border-radius:16px;
@@ -324,7 +320,9 @@ function displayAnalysis(data) {
                 margin-bottom:0;
             ">
                 Verification ID:
-                ${escapeHTML(data.verification_id || "N/A")}
+                ${escapeHTML(
+                    data.verification_id || "N/A"
+                )}
             </p>
 
         </div>
@@ -350,11 +348,10 @@ function showResult(message) {
             ${escapeHTML(message)}
         </div>
     `);
-
 }
 
 // --------------------------------------------------
-// FIND RESULT AREA
+// RESULT AREA
 // --------------------------------------------------
 
 function showResultHTML(html) {
@@ -370,11 +367,8 @@ function showResultHTML(html) {
 
         resultBox.style.marginTop = "20px";
 
-        // Try to put result near analyzer
         const analyzer =
-            document.querySelector(
-                "#analyzer"
-            );
+            document.querySelector("#analyzer");
 
         if (analyzer) {
 
@@ -388,9 +382,7 @@ function showResultHTML(html) {
 
         } else {
 
-            document.body.appendChild(
-                resultBox
-            );
+            document.body.appendChild(resultBox);
         }
     }
 
@@ -403,7 +395,7 @@ function showResultHTML(html) {
 
 function escapeHTML(value) {
 
-    return value
+    return String(value)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
@@ -412,7 +404,7 @@ function escapeHTML(value) {
 }
 
 // --------------------------------------------------
-// START BACKEND CHECK
+// START
 // --------------------------------------------------
 
 checkBackend();
