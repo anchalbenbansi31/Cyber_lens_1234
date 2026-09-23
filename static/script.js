@@ -1,15 +1,17 @@
 const BACKEND_URL =
     "https://tension-films-affiliates-cope.trycloudflare.com";
 
+let selectedFile = null;
+
 /* =========================
-   ELEMENTS
+   GET HTML ELEMENTS
 ========================= */
 
 const fileInput = document.getElementById("fileInput");
 const browseBtn = document.getElementById("browseBtn");
 const dropzone = document.getElementById("dropzone");
 
-const selectedBox = document.getElementById("selected");
+const selected = document.getElementById("selected");
 const thumb = document.getElementById("thumb");
 const fileName = document.getElementById("fileName");
 const fileMeta = document.getElementById("fileMeta");
@@ -18,8 +20,8 @@ const removeBtn = document.getElementById("removeBtn");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const againBtn = document.getElementById("againBtn");
 
-const statusText = document.getElementById("statusText");
 const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
 
 const emptyReport = document.getElementById("emptyReport");
 const loading = document.getElementById("loading");
@@ -42,9 +44,6 @@ const resultStatus =
 
 const evidence =
     document.getElementById("evidence");
-
-
-let selectedFile = null;
 
 
 /* =========================
@@ -162,15 +161,13 @@ function handleFile(file) {
         ".webp"
     ];
 
-    const fileNameLower =
+    const lowerName =
         file.name.toLowerCase();
 
     const validExtension =
         allowedExtensions.some(
             extension =>
-                fileNameLower.endsWith(
-                    extension
-                )
+                lowerName.endsWith(extension)
         );
 
     if (!validExtension) {
@@ -199,12 +196,10 @@ function handleFile(file) {
     selectedFile = file;
 
 
-    /* Show selected section */
+    /* Show selected file */
 
-    if (selectedBox) {
-        selectedBox.classList.remove(
-            "hidden"
-        );
+    if (selected) {
+        selected.classList.remove("hidden");
     }
 
 
@@ -219,55 +214,49 @@ function handleFile(file) {
     /* File size */
 
     if (fileMeta) {
-
         fileMeta.textContent =
-            formatFileSize(
-                file.size
-            );
+            formatFileSize(file.size);
     }
 
 
-    /* Preview */
+    /* Image preview */
 
     if (thumb) {
 
-        const imageURL =
+        const url =
             URL.createObjectURL(file);
 
-        thumb.src = imageURL;
+        thumb.src = url;
 
         thumb.onload = function () {
-            URL.revokeObjectURL(
-                imageURL
-            );
+            URL.revokeObjectURL(url);
         };
     }
 
 
-    /* Enable analyze */
+    /* Enable Analyze button */
 
     if (analyzeBtn) {
-
         analyzeBtn.disabled = false;
-
     }
 
 
-    /* Hide old results */
+    /* Hide previous states */
 
     hideError();
 
     if (emptyReport) {
-        emptyReport.classList.remove(
-            "hidden"
-        );
+        emptyReport.classList.remove("hidden");
+    }
+
+    if (loading) {
+        loading.classList.add("hidden");
     }
 
     if (report) {
-        report.classList.add(
-            "hidden"
-        );
+        report.classList.add("hidden");
     }
+
 
     console.log(
         "Selected file:",
@@ -277,34 +266,31 @@ function handleFile(file) {
 
 
 /* =========================
-   FILE SIZE
+   FORMAT FILE SIZE
 ========================= */
 
 function formatFileSize(bytes) {
 
     if (bytes < 1024) {
-        return bytes + " B";
+        return `${bytes} B`;
     }
 
     if (bytes < 1024 * 1024) {
 
-        return (
-            (bytes / 1024).toFixed(1)
-            + " KB"
-        );
+        return `${(
+            bytes / 1024
+        ).toFixed(1)} KB`;
 
     }
 
-    return (
-        (bytes / (1024 * 1024))
-            .toFixed(2)
-        + " MB"
-    );
+    return `${(
+        bytes / (1024 * 1024)
+    ).toFixed(2)} MB`;
 }
 
 
 /* =========================
-   DRAG & DROP
+   DRAG AND DROP
 ========================= */
 
 if (dropzone) {
@@ -370,10 +356,8 @@ if (removeBtn) {
                 fileInput.value = "";
             }
 
-            if (selectedBox) {
-                selectedBox.classList.add(
-                    "hidden"
-                );
+            if (selected) {
+                selected.classList.add("hidden");
             }
 
             if (analyzeBtn) {
@@ -381,11 +365,8 @@ if (removeBtn) {
             }
 
             if (thumb) {
-                thumb.removeAttribute(
-                    "src"
-                );
+                thumb.removeAttribute("src");
             }
-
         }
     );
 }
@@ -430,21 +411,15 @@ async function analyzeFile() {
 
 
     if (emptyReport) {
-        emptyReport.classList.add(
-            "hidden"
-        );
+        emptyReport.classList.add("hidden");
     }
 
     if (report) {
-        report.classList.add(
-            "hidden"
-        );
+        report.classList.add("hidden");
     }
 
     if (loading) {
-        loading.classList.remove(
-            "hidden"
-        );
+        loading.classList.remove("hidden");
     }
 
 
@@ -475,8 +450,19 @@ async function analyzeFile() {
             );
 
 
-        const data =
-            await response.json();
+        let data;
+
+        try {
+
+            data =
+                await response.json();
+
+        } catch (jsonError) {
+
+            throw new Error(
+                `Server returned HTTP ${response.status}`
+            );
+        }
 
 
         console.log(
@@ -485,12 +471,20 @@ async function analyzeFile() {
         );
 
 
-        if (!response.ok ||
-            !data.success) {
+        if (!response.ok) {
 
             throw new Error(
                 data.error ||
                 `HTTP ${response.status}`
+            );
+        }
+
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error ||
+                "AI analysis failed."
             );
         }
 
@@ -507,15 +501,13 @@ async function analyzeFile() {
 
         showError(
             error.message ||
-            "AI analysis failed."
+            "Unable to analyze image."
         );
 
     } finally {
 
         if (loading) {
-            loading.classList.add(
-                "hidden"
-            );
+            loading.classList.add("hidden");
         }
 
         analyzeBtn.disabled = false;
@@ -553,55 +545,65 @@ function displayResult(data) {
         );
 
 
-    if (risk) {
+    const fakeProbability =
+        Number(
+            analysis.fake_probability || 0
+        ) * 100;
 
+
+    const realProbability =
+        Number(
+            analysis.real_probability || 0
+        ) * 100;
+
+
+    /* Risk */
+
+    if (risk) {
         risk.textContent =
             riskValue.toFixed(2);
-
     }
 
+
+    /* Verdict */
 
     if (verdict) {
-
         verdict.textContent =
             verdictValue;
-
     }
 
+
+    /* Confidence */
 
     if (confidence) {
-
         confidence.textContent =
-            confidenceValue.toFixed(2)
-            + "%";
-
+            `${confidenceValue.toFixed(2)}%`;
     }
 
+
+    /* Verification ID */
 
     if (verificationId) {
-
         verificationId.textContent =
-            data.verification_id ||
-            "-";
-
+            data.verification_id || "-";
     }
 
 
-    if (resultFile) {
+    /* File */
 
+    if (resultFile) {
         resultFile.textContent =
             data.file?.name ||
             selectedFile.name;
-
     }
 
 
-    if (resultStatus) {
+    /* Status */
 
+    if (resultStatus) {
         resultStatus.textContent =
             data.status ||
             "completed";
-
     }
 
 
@@ -620,9 +622,7 @@ function displayResult(data) {
             verdictValue.toLowerCase();
 
 
-        if (
-            lower.includes("fake")
-        ) {
+        if (lower.includes("fake")) {
 
             verdictPill.classList.add(
                 "danger"
@@ -661,43 +661,56 @@ function displayResult(data) {
                 : [];
 
 
-        evidenceList.forEach(
-            item => {
+        if (evidenceList.length === 0) {
 
-                const li =
-                    document.createElement(
-                        "li"
-                    );
+            const li =
+                document.createElement("li");
 
-                li.textContent =
-                    item;
+            li.textContent =
+                "No additional evidence returned.";
 
-                evidence.appendChild(
-                    li
-                );
-            }
-        );
+            evidence.appendChild(li);
+
+        } else {
+
+            evidenceList.forEach(
+                item => {
+
+                    const li =
+                        document.createElement("li");
+
+                    li.textContent =
+                        item;
+
+                    evidence.appendChild(li);
+                }
+            );
+        }
     }
 
 
-    if (report) {
+    /* Show report */
 
-        report.classList.remove(
-            "hidden"
-        );
-
+    if (loading) {
+        loading.classList.add("hidden");
     }
 
     if (emptyReport) {
-
-        emptyReport.classList.add(
-            "hidden"
-        );
-
+        emptyReport.classList.add("hidden");
     }
 
+    if (errorBox) {
+        errorBox.classList.add("hidden");
+    }
+
+    if (report) {
+        report.classList.remove("hidden");
+    }
+
+
     console.log(
-        "CyberLens result displayed."
+        "CyberLens result displayed:",
+        analysis
     );
 }
 
@@ -708,32 +721,31 @@ function displayResult(data) {
 
 function showError(message) {
 
-    if (!errorBox) {
-        alert(message);
-        return;
+    if (loading) {
+        loading.classList.add("hidden");
     }
 
-
-    errorBox.textContent =
-        "Analysis failed: " +
-        message;
-
-
-    errorBox.classList.remove(
-        "hidden"
-    );
-
-
     if (report) {
-        report.classList.add(
-            "hidden"
-        );
+        report.classList.add("hidden");
     }
 
     if (emptyReport) {
-        emptyReport.classList.add(
+        emptyReport.classList.add("hidden");
+    }
+
+
+    if (errorBox) {
+
+        errorBox.textContent =
+            `Analysis failed: ${message}`;
+
+        errorBox.classList.remove(
             "hidden"
         );
+
+    } else {
+
+        alert(message);
     }
 }
 
@@ -746,8 +758,7 @@ function hideError() {
             "hidden"
         );
 
-        errorBox.textContent =
-            "";
+        errorBox.textContent = "";
     }
 }
 
@@ -768,41 +779,50 @@ if (againBtn) {
                 fileInput.value = "";
             }
 
-            if (selectedBox) {
-                selectedBox.classList.add(
-                    "hidden"
-                );
+            if (selected) {
+                selected.classList.add("hidden");
+            }
+
+            if (thumb) {
+                thumb.removeAttribute("src");
+            }
+
+            if (fileName) {
+                fileName.textContent = "-";
+            }
+
+            if (fileMeta) {
+                fileMeta.textContent = "-";
             }
 
             if (analyzeBtn) {
                 analyzeBtn.disabled = true;
+                analyzeBtn.textContent =
+                    "Analyze file";
             }
 
             if (report) {
-                report.classList.add(
-                    "hidden"
-                );
+                report.classList.add("hidden");
             }
 
-            if (errorBox) {
-                errorBox.classList.add(
-                    "hidden"
-                );
+            if (loading) {
+                loading.classList.add("hidden");
             }
+
+            hideError();
 
             if (emptyReport) {
                 emptyReport.classList.remove(
                     "hidden"
                 );
             }
-
         }
     );
 }
 
 
 /* =========================
-   START
+   BACKEND CHECK
 ========================= */
 
 checkBackend();
