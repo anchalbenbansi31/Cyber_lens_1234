@@ -1,6 +1,19 @@
 const BACKEND_URL =
     "https://tension-films-affiliates-cope.trycloudflare.com";
 
+const statusElements = Array.from(document.querySelectorAll("*"))
+    .filter(element =>
+        element.children.length === 0 &&
+        element.innerText &&
+        (
+            element.innerText.includes("Checking...") ||
+            element.innerText.includes("Backend offline") ||
+            element.innerText.includes("Backend online")
+        )
+    );
+
+let selectedFile = null;
+
 let selectedFile = null;
 
 // --------------------------------------------------
