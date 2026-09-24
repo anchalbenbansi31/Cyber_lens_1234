@@ -1,5 +1,4 @@
-const BACKEND_URL =
-    "https://later-thousand-reuters-cod.trycloudflare.com";
+const BACKEND_URL = "https://burst-titled-regulation-leg.trycloudflare.com";
 
 let selectedFile = null;
 
