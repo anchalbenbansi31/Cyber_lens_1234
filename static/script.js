@@ -1,5 +1,5 @@
 const BACKEND_URL =
-    "https://tension-films-affiliates-cope.trycloudflare.com";
+    "https://later-thousand-reuters-cod.trycloudflare.com";
 
 let selectedFile = null;
 
